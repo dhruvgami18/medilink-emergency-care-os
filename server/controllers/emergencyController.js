@@ -24,3 +24,17 @@ exports.createEmergency = async (req, res) => {
     res.status(500).json({ error: "Failed to create emergency report." });
   }
 };
+
+// ADD THIS MISSING FUNCTION:
+exports.getEmergencyByTrackingCode = async (req, res) => {
+  try {
+    const emergency = await Emergency.findOne({ trackingCode: req.params.code });
+    if (!emergency) {
+      return res.status(404).json({ error: "Not found." });
+    }
+    res.json(emergency);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch emergency." });
+  }
+};
