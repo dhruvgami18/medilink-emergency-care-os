@@ -1,5 +1,14 @@
 export default function PatientInfoFields({ formData, setFormData }) {
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    let value = e.target.value;
+    
+    // Prevent negative numbers for age
+    if (e.target.name === "patientAge") {
+      if (value < 0) value = 0;
+    }
+    
+    setFormData({ ...formData, [e.target.name]: value });
+  };
 
   return (
     <div className="space-y-4">
@@ -15,7 +24,15 @@ export default function PatientInfoFields({ formData, setFormData }) {
         </div>
         <div>
           <label className="text-xs font-bold text-theme-dark/70 uppercase tracking-wider mb-1 block">Patient Age</label>
-          <input type="number" name="patientAge" value={formData.patientAge} onChange={handleChange} className="w-full bg-theme-bg border border-theme-dark/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-theme-dark transition-colors" placeholder="Approximate age" />
+          <input 
+            type="number" 
+            name="patientAge" 
+            min="0" /* HTML5 validation */
+            value={formData.patientAge} 
+            onChange={handleChange} 
+            className="w-full bg-theme-bg border border-theme-dark/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-theme-dark transition-colors" 
+            placeholder="Approximate age" 
+          />
         </div>
         <div>
           <label className="text-xs font-bold text-theme-dark/70 uppercase tracking-wider mb-1 block">Patient Gender</label>
