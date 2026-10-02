@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 
 export default function EMTDashboard() {
   const navigate = useNavigate();
+  const { id } = useParams(); // Using the ID from the URL
   const [activeTab, setActiveTab] = useState('intake'); // intake, vitals, hospital, timeline
   const [syncStatus, setSyncStatus] = useState('Synced');
 
   // 1. Patient Intake Form with Local Storage Draft (Offline Support)
   const [intakeData, setIntakeData] = useState(() => {
-    const saved = localStorage.getItem('medilink_emt_draft');
+    // Attempt to load draft specific to this emergency ID
+    const saved = localStorage.getItem(`emt_draft_${id}`);
     return saved ? JSON.parse(saved) : {
       patientName: '',
       age: '',
@@ -18,31 +21,48 @@ export default function EMTDashboard() {
     };
   });
 
+  // Auto-save to Local Storage whenever intakeData changes
   useEffect(() => {
-    localStorage.setItem('medilink_emt_draft', JSON.stringify(intakeData));
-    setSyncStatus('Draft Saved Locally');
-    const timer = setTimeout(() => setSyncStatus('Synced'), 2000);
-    return () => clearTimeout(timer);
-  }, [intakeData]);
+    if (id) {
+      localStorage.setItem(`emt_draft_${id}`, JSON.stringify(intakeData));
+      setSyncStatus('Draft Saved Locally');
+      const timer = setTimeout(() => setSyncStatus('Synced'), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [intakeData, id]);
 
   const handleIntakeChange = (e) => {
     setIntakeData({ ...intakeData, [e.target.name]: e.target.value });
   };
 
-  const handleGeneratePRP = (e) => {
+  const handleGeneratePRP = async (e) => {
     e.preventDefault();
-    alert('Patient Requirement Profile (PRP) Generated and Sent to Matching Engine!');
-    setActiveTab('vitals');
+    setSyncStatus('Generating PRP...');
+    try {
+      // In a real app, this sends the PRP to the matching engine
+      await axios.put(`http://localhost:5000/api/emergencies/${id}`, { prp: intakeData });
+      alert('Patient Requirement Profile (PRP) Generated and Sent to Matching Engine!');
+      setActiveTab('vitals');
+    } catch (err) {
+      alert('Network offline. Data saved locally.');
+      setActiveTab('vitals');
+    }
+    setSyncStatus('Synced');
   };
 
   // 2. Live Vitals State
   const [vitals, setVitals] = useState({ hr: 85, bp: '120/80', spo2: 98 });
-  const handlePushVitals = () => {
+  
+  const handlePushVitals = async () => {
     setSyncStatus('Pushing Vitals...');
-    setTimeout(() => {
+    try {
+      // Send vitals to backend
+      await axios.put(`http://localhost:5000/api/emergencies/${id}`, { vitals });
       setSyncStatus('Vitals Streamed to Hospital');
       setTimeout(() => setSyncStatus('Synced'), 2000);
-    }, 1000);
+    } catch (err) {
+      setSyncStatus('Offline. Retrying...');
+    }
   };
 
   return (
@@ -77,7 +97,7 @@ export default function EMTDashboard() {
         
         {/* Status Bar */}
         <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-theme-dark/5 mb-6">
-          <div className="font-bold text-sm tracking-wider uppercase opacity-70">Case #EMG-9021</div>
+          <div className="font-bold text-sm tracking-wider uppercase opacity-70">Case #{id || 'EMG-9021'}</div>
           <div className="text-xs font-medium bg-theme-bg px-3 py-1.5 rounded-full text-theme-dark/70">
             {syncStatus}
           </div>
