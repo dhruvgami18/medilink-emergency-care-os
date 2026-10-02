@@ -5,46 +5,54 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Import Pages
+// Import Public Pages (Matching your exact filenames)
 import Home from './pages/Home';
-import Auth from './pages/Auth';
+import EmergencyReportPage from './pages/EmergencyReportPage';
 import LiveStatusTracker from './pages/LiveStatusTracker';
+import Auth from './pages/Auth';
+
+// Import Staff Pages (Matching your exact filenames)
+import DispatchDashboard from './pages/DispatchDashboard';
+import EMTDashboard from './pages/EMTDashboard'; 
 
 export default function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Public Routes */}
+          {/* --- PUBLIC ROUTES --- */}
           <Route path="/" element={<Home />} />
+          <Route path="/report" element={<EmergencyReportPage />} />
           <Route path="/track" element={<LiveStatusTracker />} />
           <Route path="/track/:code" element={<LiveStatusTracker />} />
           
-          {/* Authentication Routes (Supports both /auth and /login) */}
+          {/* --- AUTH ROUTES --- */}
           <Route path="/auth" element={<Auth />} />
           <Route path="/login" element={<Auth />} />
 
-          {/* EMT Protected Route */}
+          {/* --- PROTECTED STAFF ROUTES --- */}
+          
+          {/* 1. EMT Route */}
           <Route 
             path="/emt/intake/:id" 
             element={
               <ProtectedRoute allowedRoles={['EMT']}>
-                <div className="p-8 text-center text-2xl font-bold">EMT Patient Intake Form (Coming Next)</div>
+                <EMTDashboard />
               </ProtectedRoute>
             } 
           />
 
-          {/* Dispatcher Protected Route */}
+          {/* 2. Dispatcher Route */}
           <Route 
             path="/dispatch" 
             element={
               <ProtectedRoute allowedRoles={['Dispatcher', 'Admin']}>
-                <div className="p-8 text-center text-2xl font-bold">Dispatcher Dashboard (Coming Later)</div>
+                <DispatchDashboard />
               </ProtectedRoute>
             } 
           />
 
-          {/* Fallback for Unauthorized Access */}
+          {/* --- ERROR/FALLBACK ROUTES --- */}
           <Route path="/unauthorized" element={
             <div className="min-h-screen flex items-center justify-center bg-theme-bg p-6">
               <div className="bg-white p-8 rounded-2xl shadow-sm text-center border border-red-100 max-w-md">
