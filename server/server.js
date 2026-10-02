@@ -11,6 +11,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/emergencies", require("./routes/emergencyRoutes"));
+app.use("/api/auth", require("./routes/authRoutes")); // <-- ADDED THIS LINE
 
 // Database Connection
 mongoose
