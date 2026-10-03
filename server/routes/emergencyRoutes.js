@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const validateEmergency = require("../middleware/validateEmergency");
-const { createEmergency, getEmergencyByTrackingCode } = require("../controllers/emergencyController");
+const { updateEmergency, pushVitals } = require("../controllers/emergencyController");
 
-router.post("/", validateEmergency, createEmergency);
-router.get("/track/:code", getEmergencyByTrackingCode);
+// Update the patient requirement profile (Intake Form Tab)
+router.put("/:id", updateEmergency);
+
+// Push live vitals (Live Vitals Tab)
+router.put("/:id/vitals", pushVitals);
 
 module.exports = router;

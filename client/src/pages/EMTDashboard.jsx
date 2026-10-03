@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { Plus, ClipboardList, Activity, Building2, Clock, Navigation } from 'lucide-react';
 
 export default function EMTDashboard() {
   const navigate = useNavigate();
-  const { id } = useParams(); // Using the ID from the URL
-  const [activeTab, setActiveTab] = useState('intake'); // intake, vitals, hospital, timeline
+  const { id } = useParams();
+  const [activeTab, setActiveTab] = useState('intake'); 
   const [syncStatus, setSyncStatus] = useState('Synced');
 
-  // 1. Patient Intake Form with Local Storage Draft (Offline Support)
+  // Offline Draft
   const [intakeData, setIntakeData] = useState(() => {
-    // Attempt to load draft specific to this emergency ID
     const saved = localStorage.getItem(`emt_draft_${id}`);
     return saved ? JSON.parse(saved) : {
       patientName: '',
@@ -21,7 +21,6 @@ export default function EMTDashboard() {
     };
   });
 
-  // Auto-save to Local Storage whenever intakeData changes
   useEffect(() => {
     if (id) {
       localStorage.setItem(`emt_draft_${id}`, JSON.stringify(intakeData));
@@ -39,25 +38,24 @@ export default function EMTDashboard() {
     e.preventDefault();
     setSyncStatus('Generating PRP...');
     try {
-      // In a real app, this sends the PRP to the matching engine
       await axios.put(`http://localhost:5000/api/emergencies/${id}`, { prp: intakeData });
-      alert('Patient Requirement Profile (PRP) Generated and Sent to Matching Engine!');
+      alert('Patient Requirement Profile Generated and Saved!');
       setActiveTab('vitals');
+      setSyncStatus('Synced');
     } catch (err) {
+      console.error(err);
       alert('Network offline. Data saved locally.');
       setActiveTab('vitals');
+      setSyncStatus('Local Draft');
     }
-    setSyncStatus('Synced');
   };
 
-  // 2. Live Vitals State
   const [vitals, setVitals] = useState({ hr: 85, bp: '120/80', spo2: 98 });
   
   const handlePushVitals = async () => {
     setSyncStatus('Pushing Vitals...');
     try {
-      // Send vitals to backend
-      await axios.put(`http://localhost:5000/api/emergencies/${id}`, { vitals });
+      await axios.put(`http://localhost:5000/api/emergencies/${id}/vitals`, { vitals });
       setSyncStatus('Vitals Streamed to Hospital');
       setTimeout(() => setSyncStatus('Synced'), 2000);
     } catch (err) {
@@ -68,18 +66,18 @@ export default function EMTDashboard() {
   return (
     <div className="min-h-screen bg-theme-bg font-sans text-theme-dark flex flex-col md:flex-row">
       
-      {/* Mobile-First Sidebar / Header Nav */}
+      {/* Sidebar */}
       <nav className="bg-theme-dark text-white w-full md:w-64 md:min-h-screen p-6 flex flex-col justify-between">
         <div>
           <div className="text-xl font-bold flex items-center gap-2 mb-8 cursor-pointer" onClick={() => navigate('/')}>
-             <span className="text-theme-accentYellow">✚</span> EMT Console
+             <Plus className="w-6 h-6 text-theme-accentYellow stroke-[3]" /> EMT Console
           </div>
           
           <div className="flex md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0 hide-scrollbar">
-            <TabButton name="intake" icon="📋" label="Intake Form" activeTab={activeTab} setTab={setActiveTab} />
-            <TabButton name="vitals" icon="❤️" label="Live Vitals" activeTab={activeTab} setTab={setActiveTab} />
-            <TabButton name="hospital" icon="🏥" label="Destination" activeTab={activeTab} setTab={setActiveTab} />
-            <TabButton name="timeline" icon="⏱️" label="Timeline" activeTab={activeTab} setTab={setActiveTab} />
+            <TabButton name="intake" icon={<ClipboardList className="w-5 h-5"/>} label="Intake Form" activeTab={activeTab} setTab={setActiveTab} />
+            <TabButton name="vitals" icon={<Activity className="w-5 h-5"/>} label="Live Vitals" activeTab={activeTab} setTab={setActiveTab} />
+            <TabButton name="hospital" icon={<Building2 className="w-5 h-5"/>} label="Destination" activeTab={activeTab} setTab={setActiveTab} />
+            <TabButton name="timeline" icon={<Clock className="w-5 h-5"/>} label="Timeline" activeTab={activeTab} setTab={setActiveTab} />
           </div>
         </div>
         
@@ -95,7 +93,6 @@ export default function EMTDashboard() {
       {/* Main Content Area */}
       <main className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
         
-        {/* Status Bar */}
         <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-theme-dark/5 mb-6">
           <div className="font-bold text-sm tracking-wider uppercase opacity-70">Case #{id || 'EMG-9021'}</div>
           <div className="text-xs font-medium bg-theme-bg px-3 py-1.5 rounded-full text-theme-dark/70">
@@ -103,7 +100,6 @@ export default function EMTDashboard() {
           </div>
         </div>
 
-        {/* TAB 1: Patient Intake Form */}
         {activeTab === 'intake' && (
           <div className="bg-white rounded-[2rem] p-6 md:p-10 shadow-sm border border-theme-dark/5">
             <h2 className="text-2xl font-medium mb-6">Patient Requirement Profile (PRP)</h2>
@@ -137,14 +133,13 @@ export default function EMTDashboard() {
                 <textarea name="medicalHistory" value={intakeData.medicalHistory} onChange={handleIntakeChange} rows="2" className="w-full bg-theme-bg border border-theme-dark/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-theme-dark resize-none" placeholder="History of hypertension, allergic to penicillin..."></textarea>
               </div>
 
-              <button type="submit" className="w-full bg-theme-dark text-white font-medium py-3.5 rounded-xl mt-2 hover:bg-opacity-90 transition">
-                Generate PRP & Find Hospital
+              <button type="submit" className="w-full bg-theme-dark text-white font-medium py-3.5 rounded-xl mt-2 hover:bg-opacity-90 transition flex items-center justify-center gap-2">
+                <ClipboardList className="w-5 h-5" /> Generate PRP & Find Hospital
               </button>
             </form>
           </div>
         )}
 
-        {/* TAB 2: Live Vitals */}
         {activeTab === 'vitals' && (
           <div className="bg-white rounded-[2rem] p-6 md:p-10 shadow-sm border border-theme-dark/5">
             <h2 className="text-2xl font-medium mb-2">Live Vitals Stream</h2>
@@ -156,13 +151,12 @@ export default function EMTDashboard() {
               <VitalCard label="O2 Saturation" value={vitals.spo2} unit="%" color="bg-green-50 text-green-700" onChange={(e) => setVitals({...vitals, spo2: e.target.value})} />
             </div>
 
-            <button onClick={handlePushVitals} className="w-full bg-theme-accentBlue text-theme-dark font-medium py-4 rounded-xl hover:opacity-90 transition text-lg flex items-center justify-center gap-2">
-              <span className="text-xl">📡</span> Push Vitals to Hospital
+            <button onClick={handlePushVitals} className="w-full bg-theme-accentYellow text-theme-dark font-medium py-4 rounded-xl hover:opacity-90 transition text-lg flex items-center justify-center gap-2">
+              <Activity className="w-6 h-6 animate-pulse" /> Push Vitals to Hospital
             </button>
           </div>
         )}
 
-        {/* TAB 3: Hospital Info */}
         {activeTab === 'hospital' && (
           <div className="bg-theme-dark text-white rounded-[2rem] p-6 md:p-10 shadow-xl overflow-hidden relative">
              <div className="absolute top-0 right-0 w-64 h-64 bg-theme-accentBlue rounded-full mix-blend-multiply filter blur-3xl opacity-30 translate-x-1/3 -translate-y-1/3"></div>
@@ -182,34 +176,29 @@ export default function EMTDashboard() {
                 </div>
              </div>
 
-             <button className="w-full bg-theme-accentYellow text-theme-dark font-medium py-4 rounded-xl relative z-10 hover:bg-opacity-90 transition">
-               Launch Navigation
+             <button className="w-full bg-theme-accentYellow text-theme-dark font-medium py-4 rounded-xl relative z-10 hover:bg-opacity-90 transition flex items-center justify-center gap-2">
+               <Navigation className="w-5 h-5" /> Launch Navigation
              </button>
           </div>
         )}
 
-        {/* TAB 4: Emergency Timeline */}
         {activeTab === 'timeline' && (
           <div className="bg-white rounded-[2rem] p-6 md:p-10 shadow-sm border border-theme-dark/5">
             <h2 className="text-2xl font-medium mb-8">Case Timeline</h2>
             <div className="flex flex-col gap-6 relative border-l-2 border-theme-dark/10 ml-3 pl-6">
-              
               <TimelineEvent time="12:05 PM" title="Emergency Reported" desc="Reporter requested ambulance for Cardiac Arrest." />
               <TimelineEvent time="12:06 PM" title="Unit Dispatched" desc="Unit 42 assigned to location." />
               <TimelineEvent time="12:14 PM" title="Arrived on Scene" desc="EMT initiated patient contact." />
               <TimelineEvent time="12:18 PM" title="PRP Generated" desc="Intake form drafted. Matched to City General Hospital." isActive={true} />
               <TimelineEvent time="Pending" title="Arrival at ER" desc="Awaiting hospital handover." isPending={true} />
-
             </div>
           </div>
         )}
-
       </main>
     </div>
   );
 }
 
-// Sub-components for clean code
 function TabButton({ name, icon, label, activeTab, setTab }) {
   const isActive = activeTab === name;
   return (
@@ -217,7 +206,7 @@ function TabButton({ name, icon, label, activeTab, setTab }) {
       onClick={() => setTab(name)}
       className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition whitespace-nowrap md:whitespace-normal ${isActive ? 'bg-theme-accentYellow text-theme-dark' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
     >
-      <span className="text-lg">{icon}</span>
+      {icon}
       {label}
     </button>
   );
@@ -238,7 +227,7 @@ function VitalCard({ label, value, unit, color, onChange }) {
 function TimelineEvent({ time, title, desc, isActive, isPending }) {
   return (
     <div className={`relative ${isPending ? 'opacity-40' : ''}`}>
-      <div className={`absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 border-white ${isActive ? 'bg-theme-accentYellow' : (isPending ? 'bg-gray-300' : 'bg-theme-dark')}`}></div>
+      <div className={`absolute -left-[33px] top-1 w-4 h-4 rounded-full border-2 border-white ${isActive ? 'bg-theme-accentYellow' : (isPending ? 'bg-gray-300' : 'bg-theme-dark')}`}></div>
       <div className="text-xs font-bold text-theme-dark/50 mb-1">{time}</div>
       <div className="font-medium text-theme-dark mb-1">{title}</div>
       <div className="text-sm text-theme-dark/70">{desc}</div>
