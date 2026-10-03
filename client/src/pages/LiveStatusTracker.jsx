@@ -102,8 +102,10 @@ export default function LiveStatusTracker() {
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
         >
-          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-          
+          <TileLayer 
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+/>
           {/* Patient Location */}
           <Marker position={patientLoc}>
             <Popup className="font-bold text-red-600">Your Location</Popup>

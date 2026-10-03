@@ -34,7 +34,6 @@ export default function DispatchDashboard() {
   ];
 
   useEffect(() => {
-    // Fetch live emergencies
     const fetchQueue = async () => {
       try {
         const res = await axios.get('http://localhost:5000/api/emergencies');
@@ -42,31 +41,18 @@ export default function DispatchDashboard() {
         const sorted = res.data.sort((a, b) => a.status === 'reported' ? -1 : 1);
         setEmergencies(sorted);
         
-        // FIX: Functional update removes the dependency warning
         if (sorted.length > 0) {
           setSelectedCase(prev => prev ? prev : sorted[0]);
         }
       } catch (err) {
-        console.warn("Backend not ready yet, using UI placeholders.");
-        // Fallback UI data
-        const fallback = [{
-          _id: '64a1b2c3d4e5f6',
-          emergencyCode: 'EV-992-K',
-          patientName: 'Unknown',
-          chiefComplaint: 'Cardiac Arrest',
-          status: 'reported',
-          location: { lat: 23.0225, lng: 72.5714 },
-          createdAt: new Date().toISOString()
-        }];
-        setEmergencies(fallback);
-        setSelectedCase(prev => prev ? prev : fallback[0]);
+        console.error("Failed to fetch live emergency queue from backend:", err);
       }
     };
     
     fetchQueue();
     const interval = setInterval(fetchQueue, 5000); // Poll every 5s
     return () => clearInterval(interval);
-  }, []); 
+  }, []);
 
   const handleAssignUnit = async (unitId) => {
     if (!selectedCase) return;
@@ -150,8 +136,10 @@ export default function DispatchDashboard() {
             style={{ height: '100%', width: '100%' }}
             zoomControl={false}
           >
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-            
+            <TileLayer 
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+/>
             {/* Patient Marker */}
             {selectedCase?.location && (
               <Marker position={[selectedCase.location.lat, selectedCase.location.lng]}>
