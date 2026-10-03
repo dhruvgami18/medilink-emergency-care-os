@@ -1,48 +1,76 @@
 const Emergency = require("../models/Emergency");
 
-// Generate PRP (Save Intake Form to MongoDB)
-exports.updateEmergency = async (req, res) => {
+exports.getAllEmergencies = async (req, res) => {
   try {
-    const { prp } = req.body;
-    
-    // Checks if the ID in the URL is a MongoDB ID or a custom string (like EV-992-K)
+    const emergencies = await Emergency.find().sort({ createdAt: -1 });
+    res.status(200).json(emergencies);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch emergencies." });
+  }
+};
+
+exports.getEmergency = async (req, res) => {
+  try {
     const query = req.params.id.match(/^[0-9a-fA-F]{24}$/) 
       ? { _id: req.params.id } 
       : { emergencyCode: req.params.id };
 
-    // findOneAndUpdate with upsert:true creates the document if it doesn't exist yet!
+    const emergency = await Emergency.findOne(query);
+    if (!emergency) return res.status(404).json({ error: "Emergency not found" });
+    
+    res.status(200).json(emergency);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+exports.assignAmbulance = async (req, res) => {
+  try {
+    const { assignedAmbulance } = req.body;
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/) ? { _id: req.params.id } : { emergencyCode: req.params.id };
+
     const updatedEmergency = await Emergency.findOneAndUpdate(
       query,
       {
-        $set: {
-          patientName: prp.patientName,
-          age: prp.age,
-          gender: prp.gender,
-          chiefComplaint: prp.chiefComplaint,
-          medicalHistory: prp.medicalHistory,
+        $set: {            assignedAmbulance: assignedAmbulance,           status: 'dispatched'          },$push: { 
+          timeline: { event: `${assignedAmbulance} Dispatched to Scene`, source: "Dispatch HQ" } 
+        }
+      },
+      { new: true }
+    );
+    res.status(200).json({ data: updatedEmergency });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to assign ambulance." });
+  }
+};
+
+exports.updateEmergency = async (req, res) => {
+  try {
+    const { prp } = req.body;
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/) ? { _id: req.params.id } : { emergencyCode: req.params.id };
+
+    // Simulating the Matching Engine algorithm output
+    const matchedHospital = "City General Hospital";
+
+    const updatedEmergency = await Emergency.findOneAndUpdate(
+      query,
+      {
+        $set: {           patientName: prp.patientName,           age: prp.age,           gender: prp.gender,           chiefComplaint: prp.chiefComplaint,           medicalHistory: prp.medicalHistory,           assignedHospital: matchedHospital,           status: 'en_route_to_hospital'         },$push: { 
+          timeline: { event: `PRP Generated. Matched to ${matchedHospital}.`, source: "Field EMT" } 
         }
       },
       { new: true, upsert: true, setDefaultsOnInsert: true } 
     );
-
-    res.status(200).json({ 
-      message: "Patient Requirement Profile (PRP) successfully saved to MongoDB.", 
-      data: updatedEmergency 
-    });
+    res.status(200).json({ data: updatedEmergency });
   } catch (error) {
-    console.error("Database Update Error:", error);
-    res.status(500).json({ error: "Failed to update emergency PRP in database." });
+    res.status(500).json({ error: "Failed to update emergency PRP." });
   }
 };
 
-// Stream Live Vitals (Save Vitals to MongoDB)
 exports.pushVitals = async (req, res) => {
   try {
     const { vitals } = req.body;
-    
-    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/) 
-      ? { _id: req.params.id } 
-      : { emergencyCode: req.params.id };
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/) ? { _id: req.params.id } : { emergencyCode: req.params.id };
 
     const updatedEmergency = await Emergency.findOneAndUpdate(
       query,
@@ -51,17 +79,15 @@ exports.pushVitals = async (req, res) => {
           "vitals.hr": vitals.hr,
           "vitals.bp": vitals.bp,
           "vitals.spo2": vitals.spo2
+        },
+        $push: { 
+          timeline: { event: `Vitals Streamed (HR: ${vitals.hr}, BP: ${vitals.bp})`, source: "Field EMT" } 
         }
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
-
-    res.status(200).json({ 
-      message: "Live Vitals successfully updated in MongoDB.", 
-      data: updatedEmergency 
-    });
+    res.status(200).json({ data: updatedEmergency });
   } catch (error) {
-    console.error("Database Vitals Error:", error);
-    res.status(500).json({ error: "Failed to push vitals to database." });
+    res.status(500).json({ error: "Failed to push vitals." });
   }
 };

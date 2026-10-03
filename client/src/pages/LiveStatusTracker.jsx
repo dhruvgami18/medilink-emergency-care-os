@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { ShieldAlert, Truck, MapPin, Clock, HeartPulse, CheckCircle2, AlertCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import { Clock, MapPin, Truck, CheckCircle2, Phone, AlertCircle, ShieldAlert, Navigation } from 'lucide-react';
-
-// Fix for default Leaflet marker icons in React
 import L from 'leaflet';
+
+// Fix Leaflet icons
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -19,177 +19,183 @@ L.Icon.Default.mergeOptions({
 });
 
 export default function LiveStatusTracker() {
-  const { code } = useParams();
-  
-  // State for database data
-  const [emergencyData, setEmergencyData] = useState(null);
+  const { code } = useParams(); // e.g., EV-992-K
+  const [emergency, setEmergency] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // Default coordinates (Ahmedabad) used before DB sync is fully ready
+
+  // Default coordinates (used if patient location isn't in DB yet)
   const defaultLocation = [23.0225, 72.5714];
 
   useEffect(() => {
-    const fetchEmergencyStatus = async () => {
+    const fetchStatus = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/emergencies/${code}`);
-        setEmergencyData(response.data);
+        const res = await axios.get(`http://localhost:5000/api/emergencies/${code}`);
+        setEmergency(res.data);
       } catch (err) {
-        console.warn("Backend route not ready, using rich fallback UI.");
-        setEmergencyData({
-          status: 'en-route', 
-          eta: '8 MIN',
-          distance: '4.2 km',
-          location: defaultLocation,
-          unit: 'ALS Unit 42',
-          paramedic: 'Sarah Jenkins',
-          hospital: 'City General Hospital'
-        });
+        console.error("Failed to fetch tracker data", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchEmergencyStatus();
+
+    fetchStatus();
+    // Poll every 5 seconds to get the Dispatch assignment instantly
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
   }, [code]);
+
+  // Dynamic First-Aid Engine based on Chief Complaint
+  const getFirstAidInstructions = (complaint) => {
+    if (!complaint) return "Keep the patient calm and still. Do not move them unless in immediate danger.";
+    const lower = complaint.toLowerCase();
+    if (lower.includes('cardiac') || lower.includes('heart') || lower.includes('arrest')) {
+      return "Begin CPR immediately. Push hard and fast in the center of the chest (100-120 beats per minute).";
+    }
+    if (lower.includes('bleed')) {
+      return "Apply firm, direct pressure to the wound using a clean cloth or shirt.";
+    }
+    if (lower.includes('breath') || lower.includes('chok')) {
+      return "Keep the patient sitting upright. If choking, perform abdominal thrusts.";
+    }
+    return "Keep the patient calm, warm, and still. Do not offer food or water.";
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-bg flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-16 h-16 bg-theme-primary/20 rounded-full flex items-center justify-center mb-4">
-            <Truck className="w-8 h-8 text-theme-primary" />
-          </div>
-          <p className="text-theme-dark font-medium tracking-wide">Connecting to Emergency Network...</p>
+        <div className="animate-pulse flex flex-col items-center gap-3">
+          <ShieldAlert className="w-12 h-12 text-theme-accentYellow" />
+          <p className="text-theme-dark font-bold">Connecting to Emergency Network...</p>
         </div>
       </div>
     );
   }
 
-  const currentStatus = emergencyData?.status || 'en-route';
-  const ambLocation = emergencyData?.location || defaultLocation;
+  if (!emergency) {
+    return (
+      <div className="min-h-screen bg-theme-bg flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-sm text-center border border-red-100">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <h2 className="text-xl font-bold text-theme-dark">Invalid Tracking Code</h2>
+          <p className="text-slate-500 mt-2">No emergency found for code: {code}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const patientLoc = emergency.location || defaultLocation;
+  
+  // For demonstration: If dispatched, simulate the ambulance coordinates slightly offset from the patient
+  const isDispatched = emergency.status !== 'reported';
+  const simulatedAmbulanceLoc = isDispatched 
+    ? [patientLoc[0] - 0.015, patientLoc[1] - 0.015] 
+    : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen bg-theme-bg flex flex-col md:flex-row font-sans text-theme-dark">
       
-      {/* LEFT PANEL: Map Area */}
+      {/* LEFT PANEL: Rapido-Style Map */}
       <div className="h-[40vh] md:h-screen w-full md:w-2/3 relative z-0">
         <MapContainer 
-          center={ambLocation} 
-          zoom={14} 
+          center={patientLoc} 
+          zoom={13} 
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
         >
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-          />
-          <Marker position={ambLocation}>
-            <Popup className="font-bold">🚑 Unit Approaching</Popup>
+          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+          
+          {/* Patient Location */}
+          <Marker position={patientLoc}>
+            <Popup className="font-bold text-red-600">Your Location</Popup>
           </Marker>
+
+          {/* Ambulance Location (Only shows when Dispatch assigns it) */}
+          {isDispatched && simulatedAmbulanceLoc && (
+            <Marker position={simulatedAmbulanceLoc}>
+              <Popup className="font-bold text-blue-600">🚑 {emergency.assignedAmbulance} En Route</Popup>
+            </Marker>
+          )}
         </MapContainer>
 
-        {/* Map Overlays */}
         <div className="absolute top-4 left-4 z-[400] bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl shadow-md border border-slate-200 flex items-center gap-2">
-          <ShieldAlert className="w-5 h-5 text-red-500" />
-          <span className="font-bold text-slate-800 tracking-wide text-sm">LIVE TRACKING</span>
+          <ShieldAlert className="w-5 h-5 text-red-500 animate-pulse" />
+          <span className="font-bold tracking-wide text-sm">LIVE TRACKING</span>
         </div>
       </div>
 
-      {/* RIGHT PANEL: Details & Timeline */}
+      {/* RIGHT PANEL: Tracker Details & First Aid */}
       <div className="h-[60vh] md:h-screen w-full md:w-1/3 bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.03)] z-10 flex flex-col overflow-y-auto">
         
-        {/* Header Section */}
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+        {/* Header */}
+        <div className="p-6 border-b border-theme-dark/10 bg-theme-bg/50">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Emergency Code</div>
-              <div className="text-2xl font-mono font-bold text-theme-dark">{code || 'EV-992-K'}</div>
+              <div className="text-xs font-bold text-theme-dark/50 uppercase tracking-wider mb-1">Emergency Code</div>
+              <div className="text-2xl font-mono font-bold">{emergency.emergencyCode || code}</div>
             </div>
-            <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-green-200">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Active
+            <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border ${isDispatched ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
+              <span className={`w-2 h-2 rounded-full animate-pulse ${isDispatched ? 'bg-green-500' : 'bg-amber-500'}`}></span>
+              {isDispatched ? 'Unit Assigned' : 'Finding Unit...'}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-6">
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
-              <Clock className="w-6 h-6 text-theme-primary mx-auto mb-2" />
-              <div className="text-2xl font-black text-slate-800">{emergencyData?.eta || 'Pending'}</div>
-              <div className="text-xs font-bold text-slate-400 uppercase mt-1">Est. Arrival</div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-theme-dark/5 text-center">
+              <Truck className={`w-6 h-6 mx-auto mb-2 ${isDispatched ? 'text-blue-500' : 'text-slate-300'}`} />
+              <div className="text-xl font-black text-theme-dark">{emergency.assignedAmbulance || '--'}</div>
+              <div className="text-xs font-bold text-theme-dark/50 uppercase mt-1">Ambulance</div>
             </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
-              <Navigation className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-              <div className="text-2xl font-black text-slate-800">{emergencyData?.distance || '--'}</div>
-              <div className="text-xs font-bold text-slate-400 uppercase mt-1">Distance</div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-theme-dark/5 text-center">
+              <Clock className={`w-6 h-6 mx-auto mb-2 ${isDispatched ? 'text-theme-accentYellow' : 'text-slate-300'}`} />
+              <div className="text-xl font-black text-theme-dark">{isDispatched ? '8 MIN' : '--'}</div>
+              <div className="text-xs font-bold text-theme-dark/50 uppercase mt-1">Est. Arrival</div>
             </div>
           </div>
         </div>
 
-        {/* Dispatch Details */}
-        <div className="p-6 border-b border-slate-100">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Dispatch Information</h3>
-          
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
-                <Truck className="w-6 h-6 text-slate-600" />
-              </div>
-              <div>
-                <div className="font-bold text-slate-800">{emergencyData?.unit || 'Ambulance Assigned'}</div>
-                <div className="text-sm text-slate-500">Lead EMT: {emergencyData?.paramedic || 'Awaiting Details'}</div>
-              </div>
+        {/* Dynamic First-Aid Prompts */}
+        <div className="p-6 border-b border-theme-dark/10">
+          <div className="bg-red-50 border border-red-100 rounded-2xl p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <HeartPulse className="w-24 h-24 text-red-500" />
             </div>
-            <button className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-600 hover:bg-green-100 transition-colors">
-              <Phone className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 shrink-0" />
-            <p className="text-xs text-blue-800 font-medium leading-relaxed">
-              Please stay visible near the entrance. Keep your phone's ringer on. Do not move the patient unless they are in immediate danger.
+            <h3 className="text-xs font-bold text-red-600 uppercase tracking-wider mb-2 relative z-10">Immediate Action Required</h3>
+            <p className="text-sm text-red-900 font-medium leading-relaxed relative z-10">
+              {getFirstAidInstructions(emergency.chiefComplaint)}
             </p>
           </div>
         </div>
 
-        {/* Detailed Timeline */}
+        {/* Status Timeline */}
         <div className="p-6 flex-1">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Status Timeline</h3>
+          <h3 className="text-xs font-bold text-theme-dark/50 uppercase tracking-wider mb-6">Status Timeline</h3>
           
-          <div className="relative pl-6 space-y-8 border-l-2 border-slate-100 ml-3">
+          <div className="relative pl-6 space-y-8 border-l-2 border-theme-dark/10 ml-3">
             
-            {/* Step 1 */}
             <div className="relative">
               <div className="absolute -left-[35px] top-0 w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center ring-4 ring-white">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
-              <h4 className="font-bold text-slate-800 text-sm">Emergency Reported</h4>
-              <p className="text-xs text-slate-500 mt-1">System received your request.</p>
+              <h4 className="font-bold text-sm">Emergency Reported</h4>
+              <p className="text-xs text-theme-dark/60 mt-1">System received your request.</p>
             </div>
 
-            {/* Step 2 */}
             <div className="relative">
-              <div className={`absolute -left-[35px] top-0 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white ${currentStatus === 'en-route' || currentStatus === 'arrived' ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <h4 className={`font-bold text-sm ${currentStatus === 'en-route' || currentStatus === 'arrived' ? 'text-slate-800' : 'text-slate-400'}`}>Ambulance Dispatched</h4>
-              <p className="text-xs text-slate-500 mt-1">Unit assigned and matched to PRP.</p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative">
-              <div className={`absolute -left-[35px] top-0 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white ${currentStatus === 'en-route' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 animate-pulse' : (currentStatus === 'arrived' ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-400')}`}>
+              <div className={`absolute -left-[35px] top-0 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white ${isDispatched ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 animate-pulse' : 'bg-slate-200 text-slate-400'}`}>
                 <Truck className="w-3 h-3" />
               </div>
-              <h4 className={`font-bold text-sm ${currentStatus === 'en-route' ? 'text-blue-600' : (currentStatus === 'arrived' ? 'text-slate-800' : 'text-slate-400')}`}>En Route to Scene</h4>
-              <p className="text-xs text-slate-500 mt-1">Ambulance is navigating to your location.</p>
+              <h4 className={`font-bold text-sm ${isDispatched ? 'text-blue-600' : 'text-slate-400'}`}>Unit Dispatched</h4>
+              <p className="text-xs text-theme-dark/60 mt-1">
+                {isDispatched ? `${emergency.assignedAmbulance} is navigating to your location.` : 'Waiting for dispatch assignment.'}
+              </p>
             </div>
 
-            {/* Step 4 */}
             <div className="relative">
-              <div className={`absolute -left-[35px] top-0 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white ${currentStatus === 'arrived' ? 'bg-theme-primary text-white shadow-lg shadow-theme-primary/30 animate-pulse' : 'bg-slate-200 text-slate-400'}`}>
+              <div className={`absolute -left-[35px] top-0 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white ${emergency.status === 'arrived' ? 'bg-theme-accentYellow text-theme-dark shadow-lg shadow-yellow-500/30 animate-pulse' : 'bg-slate-200 text-slate-400'}`}>
                 <MapPin className="w-3 h-3" />
               </div>
-              <h4 className={`font-bold text-sm ${currentStatus === 'arrived' ? 'text-theme-primary' : 'text-slate-400'}`}>Arrived on Scene</h4>
-              <p className="text-xs text-slate-500 mt-1">First responders have reached the destination.</p>
+              <h4 className={`font-bold text-sm ${emergency.status === 'arrived' ? 'text-theme-dark' : 'text-slate-400'}`}>Arrived on Scene</h4>
+              <p className="text-xs text-theme-dark/60 mt-1">First responders have reached your location.</p>
             </div>
 
           </div>

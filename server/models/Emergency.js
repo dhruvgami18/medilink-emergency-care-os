@@ -1,11 +1,8 @@
 const mongoose = require("mongoose");
 
 const emergencySchema = new mongoose.Schema({
-  emergencyCode: { 
-    type: String, 
-    required: true,
-    unique: true 
-  },
+  emergencyCode: { type: String, required: true, unique: true },
+  
   // Intake Form (PRP) Data
   patientName: { type: String, default: 'Unknown' },
   age: { type: String, default: '' },
@@ -20,7 +17,17 @@ const emergencySchema = new mongoose.Schema({
     spo2: { type: String, default: '' }
   },
   
-  status: { type: String, default: 'dispatched' }
+  // Logistics & Status
+  status: { type: String, default: 'reported' },
+  assignedAmbulance: { type: String, default: null },
+  assignedHospital: { type: String, default: null },
+  
+  // Chronological Log
+  timeline: [{
+    event: String,
+    source: String,
+    timestamp: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model("Emergency", emergencySchema);
