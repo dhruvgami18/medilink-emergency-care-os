@@ -1,5 +1,28 @@
 const Emergency = require("../models/Emergency");
+// Create a new emergency (Patient Submission)
+exports.createEmergency = async (req, res) => {
+  try {
+    // Generate a random tracking code (e.g., EV-9A4K)
+    const code = 'EV-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    
+    const newEmergency = new Emergency({
+      emergencyCode: code,
+      patientName: req.body.patientName || 'Unknown',
+      chiefComplaint: req.body.chiefComplaint || 'Emergency Request',
+      location: req.body.location || { lat: 23.0225, lng: 72.5714 },
+      status: 'reported',
+      timeline: [{ event: "Emergency Reported by Bystander", source: "System" }]
+    });
 
+    await newEmergency.save();
+    
+    // Return the code so the frontend can redirect to the tracker
+    res.status(201).json({ emergencyCode: code, _id: newEmergency._id });
+  } catch (error) {
+    console.error("Create Emergency Error:", error);
+    res.status(500).json({ error: "Failed to create emergency." });
+  }
+};
 exports.getAllEmergencies = async (req, res) => {
   try {
     const emergencies = await Emergency.find().sort({ createdAt: -1 });

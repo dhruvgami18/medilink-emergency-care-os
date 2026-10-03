@@ -5,13 +5,13 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Import Public Pages (Matching your exact filenames)
+// Import Public Pages
 import Home from './pages/Home';
 import EmergencyReportPage from './pages/EmergencyReportPage';
 import LiveStatusTracker from './pages/LiveStatusTracker';
 import Auth from './pages/Auth';
 
-// Import Staff Pages (Matching your exact filenames)
+// Import Staff Pages
 import DispatchDashboard from './pages/DispatchDashboard';
 import EMTDashboard from './pages/EMTDashboard'; 
 
@@ -32,12 +32,30 @@ export default function App() {
 
           {/* --- PROTECTED STAFF ROUTES --- */}
           
-          {/* 1. EMT Route */}
+          {/* 1. EMT Routes */}
+          {/* Active Case View (Requires ID) */}
           <Route 
             path="/emt/intake/:id" 
             element={
               <ProtectedRoute allowedRoles={['EMT']}>
                 <EMTDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Post-Login Dashboard Fallback (Fixes the blank screen after login) */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['EMT', 'Dispatcher', 'Admin']}>
+                <div className="min-h-screen bg-theme-bg flex items-center justify-center p-6 font-sans">
+                  <div className="bg-white p-8 rounded-2xl shadow-sm border border-theme-dark/10 text-center max-w-md">
+                    <h2 className="text-xl font-bold mb-2 text-theme-dark">Welcome to Medilink Console</h2>
+                    <p className="text-theme-dark/60 text-sm">
+                      Please select an active emergency case from the Dispatch queue to load the EMT suite.
+                    </p>
+                  </div>
+                </div>
               </ProtectedRoute>
             } 
           />
@@ -54,7 +72,7 @@ export default function App() {
 
           {/* --- ERROR/FALLBACK ROUTES --- */}
           <Route path="/unauthorized" element={
-            <div className="min-h-screen flex items-center justify-center bg-theme-bg p-6">
+            <div className="min-h-screen flex items-center justify-center bg-theme-bg p-6 font-sans">
               <div className="bg-white p-8 rounded-2xl shadow-sm text-center border border-red-100 max-w-md">
                 <div className="text-red-500 text-4xl mb-4">⚠️</div>
                 <h2 className="text-xl font-bold mb-2">Access Denied</h2>

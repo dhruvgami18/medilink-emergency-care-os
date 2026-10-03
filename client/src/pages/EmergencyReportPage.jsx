@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import axios from "axios"; // Added missing import
 import { useGeolocation } from "../hooks/useGeolocation";
 import { useDraftStorage } from "../hooks/useDraftStorage";
-import { submitEmergencyReport } from "../services/emergencyService";
 import PatientInfoFields from "../components/report/PatientInfoFields";
 import SymptomChecklist from "../components/report/SymptomChecklist";
 import LocationCapture from "../components/report/LocationCapture";
@@ -29,34 +29,40 @@ export default function EmergencyReportPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.symptoms.length === 0) return alert("Please select at least one symptom.");
-    
-    setSubmitState("submitting");
+    setSubmitState("submitting"); // Updates your button UI
+
     try {
-      // Map flat form data to the nested backend schema
+      // 1. Prepare payload with form data AND live GPS coordinates
       const payload = {
-        reporterName: formData.reporterName,
-        reporterPhone: formData.reporterPhone,
-        patient: {
-          age: parseInt(formData.patientAge) || null,
-          gender: formData.patientGender,
-          symptoms: formData.symptoms,
-          notes: formData.notes,
-        },
-        location: geo.coords || { lat: 0, lng: 0 }, // Fallback if geo fails but manual addr is used
+        ...formData,
+        location: geo.coords 
+          ? { lat: geo.coords.latitude, lng: geo.coords.longitude } 
+          : { lat: 23.0225, lng: 72.5714 } // Fallback to default if GPS fails
       };
 
-      const result = await submitEmergencyReport(payload);
-      setTrackingCode(result.trackingCode);
+      // 2. Send the data to the backend
+      const response = await axios.post('http://localhost:5000/api/emergencies', payload);
+      
+      // 3. Extract the code specifically (matching our backend)
+      const newCode = response.data.emergencyCode; 
+      
+      // 4. Update UI states and clear draft
+      setTrackingCode(newCode);
       setSubmitState("success");
       clearDraft();
-    } catch (err) {
+
+      // 5. Redirect to the tracker
+      navigate(`/track/${newCode}`); 
+      
+    } catch (error) {
+      console.error("Submission failed:", error);
       setSubmitState("error");
+      alert("Failed to submit emergency. Please try again.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-theme-bg pb-12">
+    <div className="min-h-screen bg-theme-bg pb-12 font-sans">
       
       {/* Header Bar */}
       <div className="bg-theme-dark text-white py-12 px-6 md:px-16 rounded-b-[2.5rem] mb-8">
