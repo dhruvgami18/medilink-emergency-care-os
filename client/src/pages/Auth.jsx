@@ -15,36 +15,30 @@ export default function Auth() {
     setError('');
     
     try {
-      let loggedInUser;
+      let exactRole = 'EMT'; 
       
       if (isLogin) {
-        // 1. Perform login via your context
-        loggedInUser = await login(formData.email, formData.password);
+        // 1. Manually hit the backend FIRST to guarantee we know their role
+        const res = await axios.post('http://localhost:5000/api/auth/login', {
+          email: formData.email,
+          password: formData.password
+        });
+        exactRole = res.data.user.role;
         
-        // 2. Fallback: If your context doesn't explicitly return the user object, 
-        // pull it from localStorage where your AuthContext likely saves it.
-        if (!loggedInUser) {
-          const userStr = localStorage.getItem('user');
-          if (userStr) loggedInUser = JSON.parse(userStr);
-        }
+        // 2. Now run your normal context login so your app saves the tokens
+        await login(formData.email, formData.password);
       } else {
-        // 1. Register the new user
+        // Handle Registration
         await axios.post('http://localhost:5000/api/auth/register', formData);
-        // 2. Log them in immediately after
-        loggedInUser = await login(formData.email, formData.password);
-        
-        if (!loggedInUser) {
-          loggedInUser = { role: formData.role }; // Fallback to what they selected
-        }
+        await login(formData.email, formData.password);
+        exactRole = formData.role;
       }
 
-      // 3. Route dynamically based on the exact user role
-      const userRole = loggedInUser?.role || 'EMT'; // Default fallback
-
-      if (userRole === 'Dispatcher' || userRole === 'Admin') {
+      // 3. Simple, strict routing
+      if (exactRole === 'Dispatcher' || exactRole === 'Admin') {
         navigate('/dispatch');
-      } else if (userRole === 'EMT') {
-        navigate('/dashboard'); // EMTs wait for an active case assignment
+      } else if (exactRole === 'EMT') {
+        navigate('/emt'); 
       } else {
         navigate('/');
       }
