@@ -9,16 +9,16 @@ const {
   pushVitals 
 } = require("../controllers/emergencyController");
 
-// Dispatch Routes
+// Patient Submission Route
 router.post("/", createEmergency);
-router.get("/", getAllEmergencies);
-router.put("/:id/assign", assignAmbulance);
 
-// Universal Fetch Route (Used by EMT and Patient Tracker)
+// Dashboard Feed Routes
+router.get("/", getAllEmergencies);
 router.get("/:id", getEmergency);
 
-// EMT Action Routes
-router.put("/:id", updateEmergency);
+// Dispatch & EMT Action Routes
+router.put("/:id/assign", assignAmbulance);
+router.put("/:id/prp", updateEmergency);
 router.put("/:id/vitals", pushVitals);
 
 module.exports = router;
