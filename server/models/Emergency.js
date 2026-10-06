@@ -10,17 +10,26 @@ const emergencySchema = new mongoose.Schema({
   chiefComplaint: { type: String, default: '' },
   medicalHistory: { type: String, default: '' },
   
-  // Live Vitals Data
-  vitals: {
-    hr: { type: String, default: '' },
-    bp: { type: String, default: '' },
-    spo2: { type: String, default: '' }
+  // Location details for mapping
+  location: {
+    lat: { type: Number },
+    lng: { type: Number }
   },
+  
+  // Live Vitals Data (Changed to an Array for continuous logging)
+  vitalsLog: [{
+    hr: String,
+    bp: String,
+    spo2: String,
+    respRate: String,
+    temp: String,
+    recordedAt: { type: Date, default: Date.now }
+  }],
   
   // Logistics & Status
   status: { type: String, default: 'reported' },
   assignedAmbulance: { type: String, default: null },
-  assignedHospital: { type: String, default: null },
+  destinationHospital: { type: Object, default: null }, // Stores map/hospital object
   
   // Chronological Log
   timeline: [{

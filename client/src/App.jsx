@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Import Context & Protection
 import { AuthProvider } from './context/AuthContext';
@@ -33,9 +33,19 @@ export default function App() {
           {/* --- PROTECTED STAFF ROUTES --- */}
           
           {/* 1. EMT Routes */}
-          {/* Active Case View (Requires ID) */}
+          {/* Base EMT Route (After Login) */}
           <Route 
-            path="/emt/intake/:id" 
+            path="/emt" 
+            element={
+              <ProtectedRoute allowedRoles={['EMT']}>
+                <EMTDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Active Case View (Assigned by Dispatcher) */}
+          <Route 
+            path="/emt/:id" 
             element={
               <ProtectedRoute allowedRoles={['EMT']}>
                 <EMTDashboard />
@@ -43,22 +53,8 @@ export default function App() {
             } 
           />
           
-          {/* Post-Login Dashboard Fallback (Fixes the blank screen after login) */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={['EMT', 'Dispatcher', 'Admin']}>
-                <div className="min-h-screen bg-theme-bg flex items-center justify-center p-6 font-sans">
-                  <div className="bg-white p-8 rounded-2xl shadow-sm border border-theme-dark/10 text-center max-w-md">
-                    <h2 className="text-xl font-bold mb-2 text-theme-dark">Welcome to Medilink Console</h2>
-                    <p className="text-theme-dark/60 text-sm">
-                      Please select an active emergency case from the Dispatch queue to load the EMT suite.
-                    </p>
-                  </div>
-                </div>
-              </ProtectedRoute>
-            } 
-          />
+          {/* Remove blank dashboard and redirect safely */}
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
 
           {/* 2. Dispatcher Route */}
           <Route 

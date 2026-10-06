@@ -18,7 +18,10 @@ router.get("/:id", getEmergency);
 
 // Dispatch & EMT Action Routes
 router.put("/:id/assign", assignAmbulance);
-router.put("/:id/prp", updateEmergency);
+
+// FIX: Changed from "/:id/prp" to "/:id" to match standard REST updates and frontend calls
+router.put("/:id", updateEmergency); 
+
 router.put("/:id/vitals", pushVitals);
 
 module.exports = router;
