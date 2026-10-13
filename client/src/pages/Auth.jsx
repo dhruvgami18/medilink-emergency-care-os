@@ -19,26 +19,30 @@ export default function Auth() {
       
       if (isLogin) {
         // 1. Manually hit the backend FIRST to guarantee we know their role
-        const res = await axios.post('http://localhost:5000/api/auth/login', {
+        const res = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/login`, {
           email: formData.email,
           password: formData.password
         });
-        exactRole = res.data.user.role;
+        exactRole = res.data.user?.role || res.data.role || 'EMT';
         
-        // 2. Now run your normal context login so your app saves the tokens
+        // 2. Now run normal context login
         await login(formData.email, formData.password);
       } else {
         // Handle Registration
-        await axios.post('http://localhost:5000/api/auth/register', formData);
+        await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/register`, formData);
         await login(formData.email, formData.password);
         exactRole = formData.role;
       }
 
       // 3. Simple, strict routing
-      if (exactRole === 'Dispatcher' || exactRole === 'Admin') {
+      if (exactRole === 'Admin') {
+        navigate('/admin');
+      } else if (exactRole === 'Dispatcher') {
         navigate('/dispatch');
       } else if (exactRole === 'EMT') {
         navigate('/emt'); 
+      } else if (exactRole === 'Hospital') {
+        navigate('/hospital');
       } else {
         navigate('/');
       }
@@ -79,6 +83,7 @@ export default function Auth() {
                 <option value="EMT">EMT / First Responder</option>
                 <option value="Dispatcher">Dispatch Coordinator</option>
                 <option value="Hospital">Hospital Staff</option>
+                <option value="Admin">System Administrator</option>
               </select>
             </>
           )}

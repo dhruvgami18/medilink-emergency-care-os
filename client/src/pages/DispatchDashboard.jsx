@@ -27,8 +27,8 @@ export default function DispatchDashboard() {
 
   const defaultCenter = [23.0225, 72.5714];
 
-  // Clean, simple fleet array
-  const totalFleet = [
+  // Clean, simple fallback fleet array
+  const defaultFleet = [
     { id: 'Unit-12', type: 'ALS' },
     { id: 'Unit-42', type: 'ALS' },
     { id: 'Unit-19', type: 'BLS' },
@@ -36,7 +36,18 @@ export default function DispatchDashboard() {
     { id: 'Unit-07', type: 'ALS' }
   ];
 
+  const [totalFleet, setTotalFleet] = useState(defaultFleet);
+
   useEffect(() => {
+    // Fetch live ambulances fleet
+    axios.get('http://localhost:5000/api/ambulances')
+      .then(res => {
+        if (res.data && res.data.length > 0) {
+          setTotalFleet(res.data.map(a => ({ id: a.unitId, type: a.type, status: a.status })));
+        }
+      })
+      .catch(err => console.log("Using default fallback fleet:", err));
+
     const fetchQueue = async () => {
       try {
         const res = await axios.get('http://localhost:5000/api/emergencies');

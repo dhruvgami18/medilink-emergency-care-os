@@ -82,18 +82,49 @@ exports.updateEmergency = async (req, res) => {
       updateData.$set.gender = req.body.prp.gender;
       updateData.$set.chiefComplaint = req.body.prp.chiefComplaint;
       updateData.$set.medicalHistory = req.body.prp.medicalHistory;
+
+      // If initial vitals are included in PRP, push to vitalsLog so telemetry is never empty
+      if (req.body.prp.hr || req.body.prp.bp || req.body.prp.spo2) {
+        updateData.$push = updateData.$push || {};
+        updateData.$push.vitalsLog = {
+          hr: req.body.prp.hr || '78',
+          bp: req.body.prp.bp || '120/80',
+          spo2: req.body.prp.spo2 || '98',
+          respRate: req.body.prp.respRate || '16',
+          temp: req.body.prp.temp || '98.6',
+          recordedAt: new Date()
+        };
+      }
       timelineEvent = "Patient Requirement Profile (PRP) Generated";
     }
     
-    // B. If EMT selects a destination hospital
+    // B. If EMT selects care level / bed type (Normal vs ICU)
+    if (req.body.requiredBedType) {
+      updateData.$set.requiredBedType = req.body.requiredBedType;
+    }
+
+    // C. If EMT resets hospital for re-routing
+    if (req.body.clearHospital) {
+      updateData.$set.destinationHospital = null;
+      updateData.$set.hospitalStatus = 'none';
+      timelineEvent = "Receiving hospital cleared by EMT for re-routing";
+    }
+
+    // D. If EMT selects a destination hospital
     if (req.body.destinationHospital) {
       updateData.$set.destinationHospital = req.body.destinationHospital;
+      updateData.$set.hospitalStatus = req.body.hospitalStatus || 'pending';
       updateData.$set.status = req.body.status || 'en_route_to_hospital';
-      timelineEvent = `Destination confirmed: ${req.body.destinationHospital.name}`;
+      if (req.body.requiredBedType) {
+        updateData.$set.requiredBedType = req.body.requiredBedType;
+      }
+      const bedLabel = (req.body.requiredBedType || 'Normal') === 'ICU' ? 'ICU Bed' : 'Normal Bed';
+      timelineEvent = `Destination routed: ${req.body.destinationHospital.name} (Bed Req: ${bedLabel})`;
     }
 
     if (timelineEvent) {
-      updateData.$push = { timeline: { event: timelineEvent, source: "Field EMT" } };
+      updateData.$push = updateData.$push || {};
+      updateData.$push.timeline = { event: timelineEvent, source: "Field EMT", timestamp: new Date() };
     }
 
     const updatedEmergency = await Emergency.findOneAndUpdate(query, updateData, { new: true });
