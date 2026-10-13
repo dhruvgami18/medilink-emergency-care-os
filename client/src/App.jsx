@@ -14,6 +14,8 @@ import Auth from './pages/Auth';
 // Import Staff Pages
 import DispatchDashboard from './pages/DispatchDashboard';
 import EMTDashboard from './pages/EMTDashboard'; 
+import HospitalDashboard from './pages/HospitalDashboard'; 
+import AdminDashboard from './pages/AdminDashboard'; 
 
 export default function App() {
   return (
@@ -56,12 +58,32 @@ export default function App() {
           {/* Remove blank dashboard and redirect safely */}
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
 
-          {/* 2. Dispatcher Route */}
+          {/* 2. Dispatcher Route - Only accessible by Dispatcher staff */}
           <Route 
             path="/dispatch" 
             element={
-              <ProtectedRoute allowedRoles={['Dispatcher', 'Admin']}>
+              <ProtectedRoute allowedRoles={['Dispatcher']}>
                 <DispatchDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* 3. Hospital ER Route - Only accessible by Hospital staff */}
+          <Route 
+            path="/hospital" 
+            element={
+              <ProtectedRoute allowedRoles={['Hospital']}>
+                <HospitalDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* 4. Central Admin Command Route */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <AdminDashboard />
               </ProtectedRoute>
             } 
           />

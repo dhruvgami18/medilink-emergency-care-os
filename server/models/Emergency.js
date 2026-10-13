@@ -30,6 +30,17 @@ const emergencySchema = new mongoose.Schema({
   status: { type: String, default: 'reported' },
   assignedAmbulance: { type: String, default: null },
   destinationHospital: { type: Object, default: null }, // Stores map/hospital object
+  hospitalStatus: { 
+    type: String, 
+    enum: ['none', 'pending', 'accepted', 'rejected'], 
+    default: 'none' 
+  },
+  hospitalNotes: { type: String, default: '' },
+  requiredBedType: { 
+    type: String, 
+    enum: ['Normal', 'ICU'], 
+    default: 'Normal' 
+  },
   
   // Chronological Log
   timeline: [{
