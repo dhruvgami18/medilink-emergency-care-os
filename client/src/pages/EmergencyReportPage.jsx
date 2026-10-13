@@ -40,8 +40,9 @@ export default function EmergencyReportPage() {
           : { lat: 23.0225, lng: 72.5714 } // Fallback to default if GPS fails
       };
 
+      const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
       // 2. Send the data to the backend
-      const response = await axios.post('http://localhost:5000/api/emergencies', payload);
+      const response = await axios.post(`${API_BASE}/emergencies`, payload);
       
       // 3. Extract the code specifically (matching our backend)
       const newCode = response.data.emergencyCode; 

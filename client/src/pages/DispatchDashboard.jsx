@@ -36,11 +36,12 @@ export default function DispatchDashboard() {
     { id: 'Unit-07', type: 'ALS' }
   ];
 
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
   const [totalFleet, setTotalFleet] = useState(defaultFleet);
 
   useEffect(() => {
     // Fetch live ambulances fleet
-    axios.get('http://localhost:5000/api/ambulances')
+    axios.get(`${API_BASE}/ambulances`)
       .then(res => {
         if (res.data && res.data.length > 0) {
           setTotalFleet(res.data.map(a => ({ id: a.unitId, type: a.type, status: a.status })));
@@ -50,7 +51,7 @@ export default function DispatchDashboard() {
 
     const fetchQueue = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/emergencies');
+        const res = await axios.get(`${API_BASE}/emergencies`);
         const sorted = res.data.sort((a, b) => a.status === 'reported' ? -1 : 1);
         setEmergencies(sorted);
         
@@ -65,7 +66,7 @@ export default function DispatchDashboard() {
     fetchQueue();
     const interval = setInterval(fetchQueue, 5000); // Poll every 5s
     return () => clearInterval(interval);
-  }, []);
+  }, [API_BASE]);
 
   // Dynamically filter units that are already dispatched elsewhere
   const busyUnits = emergencies.map(e => e.assignedAmbulance).filter(Boolean);
@@ -81,7 +82,7 @@ export default function DispatchDashboard() {
     if (!selectedCase) return;
     setAssigning(true);
     try {
-      await axios.put(`http://localhost:5000/api/emergencies/${selectedCase._id}/assign`, {
+      await axios.put(`${API_BASE}/emergencies/${selectedCase._id}/assign`, {
         assignedAmbulance: unitId
       });
       setEmergencies(prev => prev.map(e => 

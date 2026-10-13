@@ -3,6 +3,8 @@ import axios from 'axios';
 
 const EmergencyContext = createContext();
 
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+
 export function EmergencyProvider({ identifier, children }) {
   const [emergency, setEmergency] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,7 +17,7 @@ export function EmergencyProvider({ identifier, children }) {
       try {
         setLoading(true);
         // Uses the same endpoint whether fetching by trackingCode (public) or ID (EMT)
-        const response = await axios.get(`http://localhost:5000/api/emergencies/${identifier}`);
+        const response = await axios.get(`${API_BASE}/emergencies/${identifier}`);
         setEmergency(response.data);
       } catch (err) {
         setError(err.message);

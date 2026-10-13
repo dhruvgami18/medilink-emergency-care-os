@@ -19,6 +19,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+
 export default function EMTDashboard() {
   const navigate = useNavigate();
   const { id } = useParams(); // If undefined, we are in Standby mode
@@ -50,7 +52,7 @@ export default function EMTDashboard() {
 
   // Fetch real-time hospitals from MongoDB API on load or tab change
   const fetchHospitals = () => {
-    axios.get('http://localhost:5000/api/hospitals')
+    axios.get(`${API_BASE}/hospitals`)
       .then(res => {
         if (res.data && res.data.length > 0) {
           setHospitalsList(res.data);
@@ -93,7 +95,7 @@ export default function EMTDashboard() {
   useEffect(() => {
     if (id) {
       const fetchCurrentCase = () => {
-        axios.get(`http://localhost:5000/api/emergencies/${id}`)
+        axios.get(`${API_BASE}/emergencies/${id}`)
           .then(res => {
             if (res.data) {
               setCaseData(res.data);
@@ -117,7 +119,7 @@ export default function EMTDashboard() {
       // Standby Polling Mode
       const checkForAssignments = async () => {
         try {
-          const res = await axios.get('http://localhost:5000/api/emergencies');
+          const res = await axios.get(`${API_BASE}/emergencies`);
           const activeCase = res.data.find(e => e.status === 'dispatched' || e.status === 'en_route_to_hospital');
           if (activeCase) {
             navigate(`/emt/${activeCase._id}`);
@@ -152,7 +154,7 @@ export default function EMTDashboard() {
     if (!id) return;
     setSyncStatus('Generating PRP & Streaming Telemetry...');
     try {
-      await axios.put(`http://localhost:5000/api/emergencies/${id}`, { 
+      await axios.put(`${API_BASE}/emergencies/${id}`, { 
         prp: {
           ...intakeData,
           hr: intakeData.hr || '78',
@@ -191,7 +193,7 @@ export default function EMTDashboard() {
     if (!id) return;
     setSyncStatus('Pushing Vitals...');
     try {
-      const response = await axios.put(`http://localhost:5000/api/emergencies/${id}/vitals`, vitals);
+      const response = await axios.put(`${API_BASE}/emergencies/${id}/vitals`, vitals);
       setVitalsHistory(response.data.vitalsLog || []);
       setVitals({ hr: '', bp: '', spo2: '', respRate: '' });
       setSyncStatus('Vitals Streamed to Hospital');
@@ -210,7 +212,7 @@ export default function EMTDashboard() {
     setSelectedHospital(null);
 
     try {
-      await axios.put(`http://localhost:5000/api/emergencies/${id}`, { clearHospital: true });
+      await axios.put(`${API_BASE}/emergencies/${id}`, { clearHospital: true });
     } catch (err) {
       console.error("Error clearing hospital in database:", err);
     }
@@ -233,7 +235,7 @@ export default function EMTDashboard() {
     setSyncStatus('Routing & Notifying ER...');
 
     try {
-      await axios.put(`http://localhost:5000/api/emergencies/${id}`, { 
+      await axios.put(`${API_BASE}/emergencies/${id}`, { 
         destinationHospital: hospital,
         hospitalStatus: 'pending',
         status: 'en_route_to_hospital',

@@ -18,6 +18,15 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.get("/", (req, res) => {
+  res.json({
+    status: "online",
+    name: "MediLink Emergency Care API",
+    version: "1.0.0",
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.use("/api/emergencies", require("./routes/emergencyRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/hospitals", require("./routes/hospitalRoutes"));

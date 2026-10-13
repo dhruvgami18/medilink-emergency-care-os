@@ -31,8 +31,9 @@ export default function LiveStatusTracker() {
     if (!codeToFetch) return;
     setLoading(true);
     setError('');
+    const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
     try {
-      const res = await axios.get(`http://localhost:5000/api/emergencies/${codeToFetch}`);
+      const res = await axios.get(`${API_BASE}/emergencies/${codeToFetch}`);
       setCaseData(res.data);
     } catch (err) {
       setError('Invalid tracking code or emergency not found.');
